@@ -1,0 +1,16 @@
+manifest.json
+{
+  "name": "Cash Tow Me",
+  "short_name": "Cash Tow Me",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#000000",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/1995/1995539.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
