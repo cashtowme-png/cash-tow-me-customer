@@ -4,7 +4,6 @@
   <meta charset="UTF-8">
   <title>Cash Tow Me</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
-  
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
@@ -19,6 +18,10 @@
     .offline { border-left-color: #ccc; opacity: 0.6; }
     .call-btn { background:#5cb85c; color:white; padding:10px 20px; border-radius:8px; text-decoration:none; display:inline-block; font-weight:bold; margin-top:10px; }
     #status-msg { font-size: 14px; margin-top: 10px; color: #666; }
+    
+    /* Star Rating Styles */
+    #rating-modal textarea { width: 90%; height: 80px; margin-bottom: 10px; border-radius: 8px; border: 1px solid #ccc; padding: 10px; font-family: inherit; }
+    #rating-modal button { width: 95%; padding: 12px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; }
   </style>
 </head>
 
@@ -27,7 +30,6 @@
   <div class="card">
     <h1>🚛 Cash Tow Me</h1>
     <p>Find local help fast. Pay your driver directly.</p>
-    
     <button class="btn-main" onclick="requestTow()">📍 SEND MY LOCATION</button>
     <p id="status-msg">Click to send coordinates to dispatch</p>
   </div>
@@ -35,25 +37,41 @@
   <hr style="border:0; border-top:1px solid #ccc; margin:30px 0;">
 
   <h2>Available Drivers</h2>
-  <div id="driver-list">
+  <div id="driver-list"></div>
+
+  <div id="rating-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:1000;">
+    <div class="card" style="margin-top:20%; background:white; padding:30px;">
+      <h2>⭐ Rate Your Driver</h2>
+      <p>How was your service with Cash Tow Me?</p>
+      <select id="star-rating" style="width:100%; padding:10px; margin:10px 0; font-size:18px;">
+        <option value="5">⭐⭐⭐⭐⭐ (Excellent)</option>
+        <option value="4">⭐⭐⭐⭐ (Good)</option>
+        <option value="3">⭐⭐⭐ (Average)</option>
+        <option value="2">⭐⭐ (Poor)</option>
+        <option value="1">⭐ (Terrible)</option>
+      </select>
+      <textarea id="rating-comment" placeholder="Any comments?"></textarea>
+      <button onclick="submitRating()" style="background:#5cb85c; color:white;">Submit Feedback</button>
+      <button onclick="closeRating()" style="background:#ccc; color:black; margin-top:10px;">Cancel</button>
     </div>
+  </div>
+
+  <button onclick="openRating()" style="background:#6c757d; color:white; font-size:14px; margin-top:20px; padding:10px; border-radius:8px; border:none;">
+    Review a Recent Tow
+  </button>
 
   <script>
-    // 1. GPS FUNCTION FOR CUSTOMERS
+    // 1. GPS FUNCTION
     function requestTow() {
       const status = document.getElementById("status-msg");
       const dispatchPhone = "2143098955";
-
       if (navigator.geolocation) {
         status.innerText = "Locating you...";
         navigator.geolocation.getCurrentPosition((pos) => {
           const lat = pos.coords.latitude;
           const lon = pos.coords.longitude;
           const mapLink = `https://maps.apple.com/?q=${lat},${lon}`;
-          
           status.innerText = "Location found! Opening messages...";
-          
-          // Pre-fills a text to dispatch
           const smsBody = encodeURIComponent(`I need a tow! My location: ${mapLink}`);
           window.location.href = `sms:${dispatchPhone}?&body=${smsBody}`;
         }, () => {
@@ -65,20 +83,16 @@
     // 2. DYNAMIC DRIVER LIST
     function displayDrivers() {
       const listContainer = document.getElementById("driver-list");
-      // This pulls the same drivers that your Driver App saves
       const drivers = JSON.parse(localStorage.getItem("drivers") || "[]");
-
       if (drivers.length === 0) {
         listContainer.innerHTML = "<p>Searching for active drivers...</p>";
         return;
       }
-
       listContainer.innerHTML = "";
       drivers.forEach(d => {
         if (d.approved) {
           const div = document.createElement("div");
           div.className = `driver-card ${d.status === 'OFF' ? 'offline' : ''}`;
-          
           div.innerHTML = `
             <h3>🚛 ${d.name} – ${d.truck}</h3>
             <p>📍 <strong>City:</strong> ${d.city}</p>
@@ -90,35 +104,27 @@
       });
     }
 
-    // Run on load
+    // 3. RATING LOGIC
+    function openRating() { document.getElementById("rating-modal").style.display = "block"; }
+    function closeRating() { document.getElementById("rating-modal").style.display = "none"; }
+    
+    function submitRating() {
+      const stars = document.getElementById("star-rating").value;
+      const comment = document.getElementById("rating-comment").value;
+      const dispatchPhone = "2143098955";
+      
+      const feedbackMessage = encodeURIComponent(`FEEDBACK: ${stars} Stars. Comment: ${comment}`);
+      window.location.href = `sms:${dispatchPhone}?&body=${feedbackMessage}`;
+      
+      alert("Thank you! Feedback text ready to send.");
+      closeRating();
+    }
+
     displayDrivers();
 
-    // 3. SERVICE WORKER
     if ("serviceWorker" in navigator) {
       navigator.serviceWorker.register("service-worker.js");
     }
-  <div id="rating-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:1000;">
-  <div class="card" style="margin-top:20%; background:white; padding:30px;">
-    <h2>⭐ Rate Your Driver</h2>
-    <p>How was your service with Cash Tow Me?</p>
-    
-    <select id="star-rating" style="width:100%; padding:10px; margin:10px 0; font-size:18px;">
-      <option value="5">⭐⭐⭐⭐⭐ (Excellent)</option>
-      <option value="4">⭐⭐⭐⭐ (Good)</option>
-      <option value="3">⭐⭐⭐ (Average)</option>
-      <option value="2">⭐⭐ (Poor)</option>
-      <option value="1">⭐ (Terrible)</option>
-    </select>
-    
-    <textarea id="rating-comment" placeholder="Any comments?" style="width:100%; height:80px; margin-bottom:10px; border-radius:8px; border:1px solid #ccc; padding:5px;"></textarea>
-    
-    <button onclick="submitRating()" style="background:#5cb85c; color:white;">Submit Feedback</button>
-    <button onclick="closeRating()" style="background:#ccc; color:black; margin-top:5px;">Cancel</button>
-  </div>
-</div>
-
-<button onclick="openRating()" style="background:#6c757d; color:white; font-size:14px; margin-top:20px;">
-  Review a Recent Tow
-</button></script>
+  </script>
 </body>
 </html>
