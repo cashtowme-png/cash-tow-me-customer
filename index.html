@@ -81,23 +81,64 @@
     }
 
     // 2. DYNAMIC DRIVER LIST
+   // 2. DYNAMIC DRIVER LIST (WITH GPS SORTING)
     function displayDrivers() {
       const listContainer = document.getElementById("driver-list");
       const drivers = JSON.parse(localStorage.getItem("drivers") || "[]");
+
       if (drivers.length === 0) {
         listContainer.innerHTML = "<p>Searching for active drivers...</p>";
         return;
       }
+
+      // Get Customer's Location to calculate distance
+      navigator.geolocation.getCurrentPosition((customerPos) => {
+        const cLat = customerPos.coords.latitude;
+        const cLon = customerPos.coords.longitude;
+
+        listContainer.innerHTML = "";
+
+        // Sort: Closest Drivers First
+        drivers.sort((a, b) => {
+          const distA = Math.hypot((a.lat || 0) - cLat, (a.lon || 0) - cLon);
+          const distB = Math.hypot((b.lat || 0) - cLat, (b.lon || 0) - cLon);
+          return distA - distB;
+        });
+
+        drivers.forEach(d => {
+          if (d.approved && d.status === "ON") {
+            // Calculate distance in miles (rough estimate)
+            const miles = (Math.hypot((d.lat || 0) - cLat, (d.lon || 0) - cLon) * 69).toFixed(1);
+            
+            const div = document.createElement("div");
+            div.className = "driver-card";
+            div.innerHTML = `
+              <h3>🚛 ${d.name} – ${d.truck}</h3>
+              <p>📍 <strong>Location:</strong> ${d.city} (~${miles} miles away)</p>
+              <p><strong>Status:</strong> ✅ Available</p>
+              <a href="tel:2143098955" class="call-btn">Call Closest Truck</a>
+            `;
+            listContainer.appendChild(div);
+          }
+        });
+      }, () => {
+        // Fallback if customer denies GPS
+        renderDriversWithoutGPS(drivers);
+      });
+    }
+
+    // Helper for when customer GPS is off
+    function renderDriversWithoutGPS(drivers) {
+      const listContainer = document.getElementById("driver-list");
       listContainer.innerHTML = "";
       drivers.forEach(d => {
-        if (d.approved) {
+        if (d.approved && d.status === "ON") {
           const div = document.createElement("div");
-          div.className = `driver-card ${d.status === 'OFF' ? 'offline' : ''}`;
+          div.className = "driver-card";
           div.innerHTML = `
             <h3>🚛 ${d.name} – ${d.truck}</h3>
             <p>📍 <strong>City:</strong> ${d.city}</p>
-            <p><strong>Status:</strong> ${d.status === 'ON' ? '✅ Available' : '❌ Busy/Offline'}</p>
-            ${d.status === 'ON' ? `<a href="tel:2143098955" class="call-btn">Call Driver</a>` : ''}
+            <a href="tel:2143098955" class="call-btn">Call Driver</a>
           `;
           listContainer.appendChild(div);
         }
